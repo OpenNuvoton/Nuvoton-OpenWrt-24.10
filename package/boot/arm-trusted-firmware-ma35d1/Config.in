@@ -1,0 +1,69 @@
+config TFA_LOAD_SCP_BL2
+        bool "Add SCP_BL2 image into FIP Image"
+        default n
+        depends on PACKAGE_trusted-firmware-a-ma35d1 && TARGET_ma35d1
+config TFA_SCP_BL2_FILE
+        string "Set SCP_BL2 binary file in Nuvoton/rtp"
+        default "template.bin"
+        depends on PACKAGE_trusted-firmware-a-ma35d1 && TFA_LOAD_SCP_BL2
+        help
+          The file name of RTP-M4 raw binary.
+
+choice
+        prompt "CPU Speed"
+        depends on PACKAGE_trusted-firmware-a-ma35d1
+config TFA_CPU650
+        bool "650 MHz"
+        depends on !TARGET_ma35d1
+config TFA_CPU800
+        bool "800 MHz"
+        depends on TARGET_ma35d1
+config TFA_CPU1G
+        bool "1 GHz"
+        depends on TARGET_ma35d1
+endchoice
+
+config TFA_PMIC_AUTO
+        bool "Set PMIC automatically"
+        default y
+        depends on PACKAGE_trusted-firmware-a-ma35d1
+choice
+        prompt "PMIC Select"
+        depends on PACKAGE_trusted-firmware-a-ma35d1 && !TFA_PMIC_AUTO
+config TFA_PMIC_0
+        bool "No PMIC"
+config TFA_PMIC_1
+        bool "DIALOG PMIC"
+config TFA_PMIC_2
+        bool "IP6103 PMIC"
+config TFA_PMIC_3
+        bool "APW7704F PMIC"
+endchoice
+
+config TFA_CPU_CORE_POWER
+        int "MA35D1 CPU Core Power"
+        default 128
+        depends on PACKAGE_trusted-firmware-a-ma35d1 && !TFA_PMIC_AUTO && !TFA_PMIC_0
+        help
+          The cpu core power voltage
+          decimal integer value.
+          125 = 1.25V, 120 = 1.20V,
+          1xx = 1.xxV, etc.
+
+config TFA_CUSTOM_DDR_FILE_AUTO
+        bool "Set Custom DDR header file automatically"
+        default y
+        depends on PACKAGE_trusted-firmware-a-ma35d1
+choice
+        prompt "MA35D1 Chip version"
+        depends on TARGET_ma35d1 && PACKAGE_trusted-firmware-a-ma35d1 && TFA_CUSTOM_DDR_FILE_AUTO
+config TFA_MA35_VER_A
+        bool "MA35 series version A SoC"
+config TFA_MA35_VER_B
+        bool "MA35 series version B SoC"
+endchoice
+config TFA_CUSTOM_DDR_FILE
+        string "Set Custom DDR header file in Nuvoton/ddr"
+        default "MA35D16F987C_LQFP-216_MCP_WinbondDDR3L_512M_1PCS.h"
+        depends on PACKAGE_trusted-firmware-a-ma35d1 && !TFA_CUSTOM_DDR_FILE_AUTO
+
