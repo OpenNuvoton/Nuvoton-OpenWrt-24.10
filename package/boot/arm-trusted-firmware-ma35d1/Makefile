@@ -6,7 +6,10 @@
 include $(TOPDIR)/rules.mk
 
 #PKG_NAME:=arm-trusted-firmware
+PKG_VERSION:=2.3
 PKG_RELEASE:=1
+
+PKG_CPE_ID:=cpe:/o:arm:trusted_firmware-a
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/OpenNuvoton/MA35D1_arm-trusted-firmware-v2.3.git

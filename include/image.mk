@@ -316,6 +316,9 @@ define Image/Manifest
 			$(BIN_DIR)/$(IMG_PREFIX)$(if $(PROFILE_SANITIZED),-$(PROFILE_SANITIZED)).manifest \
 	)
 ifneq ($(CONFIG_JSON_CYCLONEDX_SBOM),)
+	SBOM_LINUX_VERSION="$(LINUX_VERSION)" \
+	SBOM_KERNEL_PATCHVER="$(KERNEL_PATCHVER)$(strip $(LINUX_VERSION-$(KERNEL_PATCHVER)))" \
+	SBOM_TARGET_BOARD="$(BOARD)" \
 	$(SCRIPT_DIR)/package-metadata.pl imgcyclonedxsbom \
 		$(if $(IB),$(TOPDIR)/.packageinfo, $(TMP_DIR)/.packageinfo) \
 		$(BIN_DIR)/$(IMG_PREFIX)$(if $(PROFILE_SANITIZED),-$(PROFILE_SANITIZED)).manifest > \

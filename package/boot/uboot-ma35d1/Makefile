@@ -8,6 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 #PKG_NAME:=uboot
+PKG_VERSION:=2020.07
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -15,6 +16,8 @@ PKG_SOURCE_URL:=https://github.com/OpenNuvoton/MA35D1_u-boot-v2020.07.git
 PKG_SOURCE_DATE:=2025-11-06
 PKG_SOURCE_VERSION:=d39f0d5442637b1e94123382fd2000ca11736f52
 PKG_MIRROR_HASH:=3937110da45154308a4867f3a1b69aa61e9f81db7802560df91a2f2d39e0d07b
+
+PKG_CPE_ID:=cpe:/a:denx:u-boot
 
 include $(INCLUDE_DIR)/u-boot.mk
 include $(INCLUDE_DIR)/package.mk

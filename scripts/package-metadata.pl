@@ -669,6 +669,18 @@ sub gen_image_cyclonedxsbom() {
 	my @components;
 	my %image_packages;
 
+	# Read kernel/U-Boot/target info from environment variables
+	# These are exported by include/image.mk when calling this script
+	my $env_kernel_version = $ENV{SBOM_LINUX_VERSION} || '';
+	my $env_kernel_patchver = $ENV{SBOM_KERNEL_PATCHVER} || '';
+	my $env_target_board = $ENV{SBOM_TARGET_BOARD} || '';
+
+	# When kernel is from a custom git repo, LINUX_VERSION is a sanitized URI.
+	# Use KERNEL_PATCHVER (e.g. "6.6.93") as the real version in that case.
+	if ($env_kernel_patchver =~ /^\d+\.\d+/) {
+		$env_kernel_version = $env_kernel_patchver;
+	}
+
 	%image_packages = image_manifest_packages($imgmanifest);
 	%image_packages or exit 1;
 	parse_package_metadata($pkginfo) or exit 1;
@@ -735,6 +747,274 @@ sub gen_image_cyclonedxsbom() {
 			$type ? (type => $type) : (),
 			$version ? (version => $version) : (),
 		};
+	}
+
+	# --- Add Linux Kernel component ---
+	if ($env_kernel_version) {
+		# Check if kernel was already added from image manifest
+		my $kernel_found = 0;
+		foreach my $comp (@components) {
+			if ($comp->{name} eq 'kernel') {
+				$comp->{name} = "linux";
+				$comp->{version} = $env_kernel_version;
+				$comp->{type} = "library";
+				$comp->{cpe} = "cpe:/o:linux:linux_kernel:$env_kernel_version";
+				$kernel_found = 1;
+				last;
+			}
+		}
+		unless ($kernel_found) {
+			push @components, {
+				name => "linux",
+				version => $env_kernel_version,
+				type => "library",
+				licenses => [ { license => { name => "GPL-2.0" } } ],
+				cpe => "cpe:/o:linux:linux_kernel:$env_kernel_version",
+			};
+		}
+	}
+
+	# --- Add U-Boot bootloader component ---
+	# Auto-detect U-Boot from parsed package metadata, matching current target board
+	{
+		my $uboot_found = 0;
+		foreach my $comp (@components) {
+			if ($comp->{name} =~ /^u-boot/) {
+				$uboot_found = 1;
+				last;
+			}
+		}
+		unless ($uboot_found) {
+			my $matched_pkg;
+
+			# Collect all u-boot packages from packageinfo
+			my @uboot_pkgs;
+			foreach my $pname (sort keys %package) {
+				next unless $pname =~ /^u-boot/;
+				my $upkg = $package{$pname};
+				next unless $upkg;
+				push @uboot_pkgs, $upkg;
+			}
+
+			if ($env_target_board && @uboot_pkgs) {
+				# 1st priority: exact match u-boot-<board>
+				foreach my $upkg (@uboot_pkgs) {
+					if ($upkg->{name} eq "u-boot-$env_target_board") {
+						$matched_pkg = $upkg;
+						last;
+					}
+				}
+				# 2nd priority: name contains the board name
+				if (!$matched_pkg) {
+					foreach my $upkg (@uboot_pkgs) {
+						if ($upkg->{name} =~ /^u-boot-\Q$env_target_board\E/) {
+							$matched_pkg = $upkg;
+							last;
+						}
+					}
+				}
+				# 3rd priority: check Build-Target in src metadata
+				if (!$matched_pkg) {
+					foreach my $upkg (@uboot_pkgs) {
+						my $src = $upkg->{src};
+						if ($src && $src->{name} &&
+						    $src->{name} =~ /\Q$env_target_board\E/i) {
+							$matched_pkg = $upkg;
+							last;
+						}
+					}
+				}
+			}
+
+			# Final fallback: if only one u-boot package exists, use it
+			if (!$matched_pkg && @uboot_pkgs == 1) {
+				$matched_pkg = $uboot_pkgs[0];
+			}
+
+			if ($matched_pkg) {
+				my $uboot_version = $matched_pkg->{version} || '';
+				$uboot_version =~ s/-r\d+$//;
+
+				my $uboot_cpe = $matched_pkg->{cpe_id} || 'cpe:/a:denx:u-boot';
+				my $uboot_license = $matched_pkg->{license} || 'GPL-2.0 GPL-2.0+';
+
+				my @ulicenses;
+				foreach my $lic (split(/\s+/, $uboot_license)) {
+					push @ulicenses, { license => { name => $lic } };
+				}
+
+				push @components, {
+					name => "uboot",
+					version => $uboot_version,
+					type => "library",
+					licenses => [ @ulicenses ],
+					cpe => "$uboot_cpe:$uboot_version",
+				};
+			}
+		}
+	}
+
+	# --- Add TF-A (ARM Trusted Firmware) component ---
+	# Auto-detect from parsed package metadata, same approach as U-Boot above.
+	# Platforms without TF-A (e.g. NUC980) simply have no matching packages.
+	{
+		my $tfa_found = 0;
+		foreach my $comp (@components) {
+			if ($comp->{name} eq 'arm-trusted-firmware') {
+				$tfa_found = 1;
+				last;
+			}
+		}
+		unless ($tfa_found) {
+			my $matched_pkg;
+
+			my @tfa_pkgs;
+			foreach my $pname (sort keys %package) {
+				next unless $pname =~ /^trusted-firmware-a/;
+				my $tpkg = $package{$pname};
+				next unless $tpkg;
+				push @tfa_pkgs, $tpkg;
+			}
+
+			if ($env_target_board && @tfa_pkgs) {
+				# 1st priority: exact match trusted-firmware-a-<board>
+				foreach my $tpkg (@tfa_pkgs) {
+					if ($tpkg->{name} eq "trusted-firmware-a-$env_target_board") {
+						$matched_pkg = $tpkg;
+						last;
+					}
+				}
+				# 2nd priority: name contains the board name
+				if (!$matched_pkg) {
+					foreach my $tpkg (@tfa_pkgs) {
+						if ($tpkg->{name} =~ /\Qtrusted-firmware-a-$env_target_board\E/) {
+							$matched_pkg = $tpkg;
+							last;
+						}
+					}
+				}
+				# 3rd priority: source package directory contains the board name
+				if (!$matched_pkg) {
+					foreach my $tpkg (@tfa_pkgs) {
+						my $src = $tpkg->{src};
+						if ($src && $src->{name} &&
+						    $src->{name} =~ /\Q$env_target_board\E/i) {
+							$matched_pkg = $tpkg;
+							last;
+						}
+					}
+				}
+			}
+
+			# Final fallback: if only one TF-A package exists, use it
+			if (!$matched_pkg && @tfa_pkgs == 1) {
+				$matched_pkg = $tfa_pkgs[0];
+			}
+
+			if ($matched_pkg) {
+				my $tfa_version = $matched_pkg->{version} || '';
+				$tfa_version =~ s/-r\d+$//;
+
+				my $tfa_cpe = $matched_pkg->{cpe_id} || 'cpe:/o:arm:trusted_firmware-a';
+				my $tfa_license = $matched_pkg->{license} || 'BSD-3-Clause';
+
+				my @tlicenses;
+				foreach my $lic (split(/\s+/, $tfa_license)) {
+					push @tlicenses, { license => { name => $lic } };
+				}
+
+				push @components, {
+					name => "arm-trusted-firmware",
+					version => $tfa_version,
+					type => "library",
+					licenses => [ @tlicenses ],
+					cpe => "$tfa_cpe:$tfa_version",
+				};
+			}
+		}
+	}
+
+	# --- Add OP-TEE OS component ---
+	# Auto-detect from parsed package metadata, same approach as U-Boot above.
+	# Note: OP-TEE package may use a shorter target name (e.g. "optee-os-ma35"
+	# instead of "optee-os-ma35d1"), so board matching falls through to
+	# source-directory or single-package fallback.
+	# Platforms without OP-TEE (e.g. NUC980) simply have no matching packages.
+	{
+		my $optee_found = 0;
+		foreach my $comp (@components) {
+			if ($comp->{name} eq 'optee-os') {
+				$optee_found = 1;
+				last;
+			}
+		}
+		unless ($optee_found) {
+			my $matched_pkg;
+
+			my @optee_pkgs;
+			foreach my $pname (sort keys %package) {
+				next unless $pname =~ /^optee-os/;
+				my $opkg = $package{$pname};
+				next unless $opkg;
+				push @optee_pkgs, $opkg;
+			}
+
+			if ($env_target_board && @optee_pkgs) {
+				# 1st priority: exact match optee-os-<board>
+				foreach my $opkg (@optee_pkgs) {
+					if ($opkg->{name} eq "optee-os-$env_target_board") {
+						$matched_pkg = $opkg;
+						last;
+					}
+				}
+				# 2nd priority: name contains the board name
+				if (!$matched_pkg) {
+					foreach my $opkg (@optee_pkgs) {
+						if ($opkg->{name} =~ /\Qoptee-os-$env_target_board\E/) {
+							$matched_pkg = $opkg;
+							last;
+						}
+					}
+				}
+				# 3rd priority: source package directory contains the board name
+				if (!$matched_pkg) {
+					foreach my $opkg (@optee_pkgs) {
+						my $src = $opkg->{src};
+						if ($src && $src->{name} &&
+						    $src->{name} =~ /\Q$env_target_board\E/i) {
+							$matched_pkg = $opkg;
+							last;
+						}
+					}
+				}
+			}
+
+			# Final fallback: if only one optee-os package exists, use it
+			if (!$matched_pkg && @optee_pkgs == 1) {
+				$matched_pkg = $optee_pkgs[0];
+			}
+
+			if ($matched_pkg) {
+				my $optee_version = $matched_pkg->{version} || '';
+				$optee_version =~ s/-r\d+$//;
+
+				my $optee_cpe = $matched_pkg->{cpe_id} || 'cpe:/o:linaro:op-tee';
+				my $optee_license = $matched_pkg->{license} || 'BSD-2-Clause';
+
+				my @olicenses;
+				foreach my $lic (split(/\s+/, $optee_license)) {
+					push @olicenses, { license => { name => $lic } };
+				}
+
+				push @components, {
+					name => "optee-os",
+					version => $optee_version,
+					type => "library",
+					licenses => [ @olicenses ],
+					cpe => "$optee_cpe:$optee_version",
+				};
+			}
+		}
 	}
 
 	print dump_cyclonedxsbom_json(@components);
