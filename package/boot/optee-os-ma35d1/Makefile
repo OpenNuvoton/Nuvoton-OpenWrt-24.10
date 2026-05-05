@@ -6,13 +6,13 @@
 include $(TOPDIR)/rules.mk
 
 #PKG_NAME:=optee-os
-PKG_VERSION:=4.2
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/OpenNuvoton/optee_os_ma35.git
 
 PKG_CPE_ID:=cpe:/o:linaro:op-tee
+PKG_CPE_VERSION:=4.2
 PKG_SOURCE_DATE:=2025-10-28
 PKG_SOURCE_VERSION:=4b165ce31f423b33d743c4b8e7996b85fe8b98f7
 PKG_MIRROR_HASH:=d53602ae131bc447a6e90e750412a0269141ef3c0feda65e4046aaac38b6173b

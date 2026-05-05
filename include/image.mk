@@ -319,6 +319,9 @@ ifneq ($(CONFIG_JSON_CYCLONEDX_SBOM),)
 	SBOM_LINUX_VERSION="$(LINUX_VERSION)" \
 	SBOM_KERNEL_PATCHVER="$(KERNEL_PATCHVER)$(strip $(LINUX_VERSION-$(KERNEL_PATCHVER)))" \
 	SBOM_TARGET_BOARD="$(BOARD)" \
+	SBOM_UBOOT_VERSION="$(shell grep -m1 '^PKG_CPE_VERSION' $(TOPDIR)/package/boot/uboot-*/Makefile 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')" \
+	SBOM_TFA_VERSION="$(shell grep -m1 '^PKG_CPE_VERSION' $(TOPDIR)/package/boot/arm-trusted-firmware-*/Makefile 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')" \
+	SBOM_OPTEE_VERSION="$(shell grep -m1 '^PKG_CPE_VERSION' $(TOPDIR)/package/boot/optee-os-*/Makefile 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')" \
 	$(SCRIPT_DIR)/package-metadata.pl imgcyclonedxsbom \
 		$(if $(IB),$(TOPDIR)/.packageinfo, $(TMP_DIR)/.packageinfo) \
 		$(BIN_DIR)/$(IMG_PREFIX)$(if $(PROFILE_SANITIZED),-$(PROFILE_SANITIZED)).manifest > \

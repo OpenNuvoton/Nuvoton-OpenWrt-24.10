@@ -674,6 +674,9 @@ sub gen_image_cyclonedxsbom() {
 	my $env_kernel_version = $ENV{SBOM_LINUX_VERSION} || '';
 	my $env_kernel_patchver = $ENV{SBOM_KERNEL_PATCHVER} || '';
 	my $env_target_board = $ENV{SBOM_TARGET_BOARD} || '';
+	my $env_uboot_version = $ENV{SBOM_UBOOT_VERSION} || '';
+	my $env_tfa_version = $ENV{SBOM_TFA_VERSION} || '';
+	my $env_optee_version = $ENV{SBOM_OPTEE_VERSION} || '';
 
 	# When kernel is from a custom git repo, LINUX_VERSION is a sanitized URI.
 	# Use KERNEL_PATCHVER (e.g. "6.6.93") as the real version in that case.
@@ -832,7 +835,7 @@ sub gen_image_cyclonedxsbom() {
 			}
 
 			if ($matched_pkg) {
-				my $uboot_version = $matched_pkg->{version} || '';
+				my $uboot_version = $env_uboot_version || $matched_pkg->{version} || '';
 				$uboot_version =~ s/-r\d+$//;
 
 				my $uboot_cpe = $matched_pkg->{cpe_id} || 'cpe:/a:denx:u-boot';
@@ -912,7 +915,7 @@ sub gen_image_cyclonedxsbom() {
 			}
 
 			if ($matched_pkg) {
-				my $tfa_version = $matched_pkg->{version} || '';
+				my $tfa_version = $env_tfa_version || $matched_pkg->{version} || '';
 				$tfa_version =~ s/-r\d+$//;
 
 				my $tfa_cpe = $matched_pkg->{cpe_id} || 'cpe:/o:arm:trusted_firmware-a';
@@ -995,7 +998,7 @@ sub gen_image_cyclonedxsbom() {
 			}
 
 			if ($matched_pkg) {
-				my $optee_version = $matched_pkg->{version} || '';
+				my $optee_version = $env_optee_version || $matched_pkg->{version} || '';
 				$optee_version =~ s/-r\d+$//;
 
 				my $optee_cpe = $matched_pkg->{cpe_id} || 'cpe:/o:linaro:op-tee';
