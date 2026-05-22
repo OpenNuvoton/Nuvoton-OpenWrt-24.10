@@ -35,8 +35,8 @@ CONFIG_HOST_OS_LINUX=y
 # CONFIG_TARGET_layerscape is not set
 # CONFIG_TARGET_qoriq is not set
 # CONFIG_TARGET_imx is not set
-# CONFIG_TARGET_ma35d0 is not set
-CONFIG_TARGET_ma35d1=y
+CONFIG_TARGET_ma35d0=y
+# CONFIG_TARGET_ma35d1 is not set
 # CONFIG_TARGET_qualcommax is not set
 # CONFIG_TARGET_ipq40xx is not set
 # CONFIG_TARGET_ipq806x is not set
@@ -51,26 +51,17 @@ CONFIG_TARGET_ma35d1=y
 # CONFIG_TARGET_uml is not set
 # CONFIG_TARGET_zynq is not set
 # CONFIG_TARGET_x86 is not set
-CONFIG_TARGET_ma35d1_som=y
-# CONFIG_TARGET_ma35d1_iot is not set
+CONFIG_TARGET_ma35d0_iot=y
 # CONFIG_TARGET_MULTI_PROFILE is not set
-# CONFIG_TARGET_ma35d1_som_Default is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_1g-nand is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_1g-sdcard0 is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_1g-sdcard1 is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_1g-spinand is not set
-CONFIG_TARGET_ma35d1_som_DEVICE_256m-nand=y
-# CONFIG_TARGET_ma35d1_som_DEVICE_256m-sdcard0 is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_256m-sdcard1 is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_256m-spinand is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_512m-nand is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_512m-sdcard0 is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_512m-sdcard1 is not set
-# CONFIG_TARGET_ma35d1_som_DEVICE_512m-spinand is not set
+# CONFIG_TARGET_ma35d0_iot_Default is not set
+CONFIG_TARGET_ma35d0_iot_DEVICE_256m-nand=y
+# CONFIG_TARGET_ma35d0_iot_DEVICE_256m-sdcard0 is not set
+# CONFIG_TARGET_ma35d0_iot_DEVICE_256m-sdcard1 is not set
+# CONFIG_TARGET_ma35d0_iot_DEVICE_256m-spinand is not set
 CONFIG_HAS_SUBTARGETS=y
 CONFIG_HAS_DEVICES=y
-CONFIG_TARGET_BOARD="ma35d1"
-CONFIG_TARGET_SUBTARGET="som"
+CONFIG_TARGET_BOARD="ma35d0"
+CONFIG_TARGET_SUBTARGET="iot"
 CONFIG_TARGET_PROFILE="DEVICE_256m-nand"
 CONFIG_TARGET_ARCH_PACKAGES="aarch64_generic"
 CONFIG_DEFAULT_TARGET_OPTIMIZATION="-Os -pipe -mcpu=generic"
@@ -105,14 +96,12 @@ CONFIG_AUDIO_SUPPORT=y
 CONFIG_GPIO_SUPPORT=y
 CONFIG_USB_SUPPORT=y
 CONFIG_RTC_SUPPORT=y
-CONFIG_USES_DEVICETREE=y
 CONFIG_USES_SQUASHFS=y
 CONFIG_USES_JFFS2=y
 CONFIG_USES_TARGZ=y
 CONFIG_USES_UBIFS=y
 CONFIG_NAND_SUPPORT=y
 CONFIG_ARCH_64BIT=y
-CONFIG_VIRTIO_SUPPORT=y
 CONFIG_USES_ROOTFS_PART=y
 CONFIG_USES_BOOT_PART=y
 CONFIG_aarch64=y
@@ -151,7 +140,7 @@ CONFIG_TARGET_IMAGES_GZIP=y
 #
 # Image Options
 #
-# CONFIG_MA35D1_SECURE_BOOT is not set
+# CONFIG_MA35D0_SECURE_BOOT is not set
 CONFIG_TARGET_KERNEL_PARTSIZE=16
 CONFIG_TARGET_ROOTFS_PARTSIZE=104
 # CONFIG_TARGET_ROOTFS_PERSIST_VAR is not set
@@ -1762,13 +1751,9 @@ CONFIG_NETJSON_MONITORING_IWINFO=y
 #
 CONFIG_PACKAGE_optee-os-ma35=y
 CONFIG_PACKAGE_trusted-firmware-a-ma35d1=y
-# CONFIG_TFA_LOAD_SCP_BL2 is not set
-CONFIG_TFA_CPU800=y
-# CONFIG_TFA_CPU1G is not set
+CONFIG_TFA_CPU650=y
 CONFIG_TFA_PMIC_AUTO=y
 CONFIG_TFA_CUSTOM_DDR_FILE_AUTO=y
-CONFIG_TFA_MA35_VER_A=y
-# CONFIG_TFA_MA35_VER_B is not set
 CONFIG_PACKAGE_u-boot-ma35d1=y
 # end of Boot Loaders
 
@@ -2271,7 +2256,6 @@ CONFIG_PACKAGE_kmod-crypto-sha512=y
 # CONFIG_PACKAGE_kmod-iio-bmp280-spi is not set
 # CONFIG_PACKAGE_kmod-iio-ccs811 is not set
 # CONFIG_PACKAGE_kmod-iio-core is not set
-# CONFIG_PACKAGE_kmod-iio-dht11 is not set
 # CONFIG_PACKAGE_kmod-iio-fxas21002c is not set
 # CONFIG_PACKAGE_kmod-iio-fxas21002c-i2c is not set
 # CONFIG_PACKAGE_kmod-iio-fxas21002c-spi is not set
@@ -2552,7 +2536,6 @@ CONFIG_PACKAGE_kmod-nft-offload=y
 # Network Support
 #
 # CONFIG_PACKAGE_kmod-9pnet is not set
-# CONFIG_PACKAGE_kmod-9pvirtio is not set
 # CONFIG_PACKAGE_kmod-appletalk is not set
 # CONFIG_PACKAGE_kmod-atm is not set
 # CONFIG_PACKAGE_kmod-ax25 is not set
