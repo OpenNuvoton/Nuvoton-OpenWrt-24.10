@@ -53,14 +53,14 @@ endif
 
 ifeq ($(BOARD),ma35d1)
 ifeq ($(CONFIG_TFA_PMIC_AUTO),y)
-ifeq ($(SUBTARGET),iot)
+ifneq ($(filter iot iotv1,$(SUBTARGET)),)
   TFA_MAKE_FLAGS += MA35D1_PMIC=0
-else ifeq ($(SUBTARGET),som)
-ifeq ($(CONFIG_TFA_MA35_VER_A),y)
+else ifneq ($(filter som hmi,$(SUBTARGET)),)
+ifneq ($(filter y,$(CONFIG_TFA_MA35_5A789) $(CONFIG_TFA_MA35_6A789)),)
   TFA_MAKE_FLAGS += MA35D1_PMIC=1 MA35D1_CPU_CORE=128
-else ifeq ($(CONFIG_TFA_MA35_VER_B),y)
+else ifeq ($(CONFIG_TFA_MA35_6AHIJ),y)
   TFA_MAKE_FLAGS += MA35D1_PMIC=3 MA35D1_CPU_CORE=128
-endif	// VER
+endif	// 5A789
 endif
 else ifeq ($(CONFIG_TFA_PMIC_0),y)
   TFA_MAKE_FLAGS += MA35D1_PMIC=0
@@ -70,18 +70,6 @@ else ifeq ($(CONFIG_TFA_PMIC_2),y)
   TFA_MAKE_FLAGS += MA35D1_PMIC=2 MA35D1_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
 else ifeq ($(CONFIG_TFA_PMIC_3),y)
   TFA_MAKE_FLAGS += MA35D1_PMIC=3 MA35D1_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
-endif
-else ifeq ($(BOARD),ma35h0)
-ifeq ($(CONFIG_TFA_PMIC_AUTO),y)
-  TFA_MAKE_FLAGS += MA35H0_PMIC=0
-else ifeq ($(CONFIG_TFA_PMIC_0),y)
-  TFA_MAKE_FLAGS += MA35H0_PMIC=0
-else ifeq ($(CONFIG_TFA_PMIC_1),y) MA35H0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
-  TFA_MAKE_FLAGS += MA35H0_PMIC=1
-else ifeq ($(CONFIG_TFA_PMIC_2),y) MA35H0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
-  TFA_MAKE_FLAGS += MA35H0_PMIC=2
-else ifeq ($(CONFIG_TFA_PMIC_3),y) MA35H0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
-  TFA_MAKE_FLAGS += MA35H0_PMIC=3
 endif
 else ifeq ($(BOARD),ma35d0)
 ifeq ($(CONFIG_TFA_PMIC_AUTO),y)
@@ -95,13 +83,25 @@ else ifeq ($(CONFIG_TFA_PMIC_2),y)
 else ifeq ($(CONFIG_TFA_PMIC_3),y)
   TFA_MAKE_FLAGS += MA35D0_PMIC=3 MA35D0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
 endif
+else ifeq ($(BOARD),ma35h0)
+ifeq ($(CONFIG_TFA_PMIC_AUTO),y)
+  TFA_MAKE_FLAGS += MA35H0_PMIC=0
+else ifeq ($(CONFIG_TFA_PMIC_0),y)
+  TFA_MAKE_FLAGS += MA35H0_PMIC=0
+else ifeq ($(CONFIG_TFA_PMIC_1),y) MA35H0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
+  TFA_MAKE_FLAGS += MA35H0_PMIC=1
+else ifeq ($(CONFIG_TFA_PMIC_2),y) MA35H0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
+  TFA_MAKE_FLAGS += MA35H0_PMIC=2
+else ifeq ($(CONFIG_TFA_PMIC_3),y) MA35H0_CPU_CORE=$(CONFIG_TFA_CPU_CORE_POWER)
+  TFA_MAKE_FLAGS += MA35H0_PMIC=3
+endif
 endif	// BOARD
 
 ifeq ($(CONFIG_MA35D1_SECURE_BOOT),y)
   TFA_MAKE_FLAGS += FIP_DE_AES=1
-else ifeq ($(CONFIG_MA35H0_SECURE_BOOT),y)
-  TFA_MAKE_FLAGS += FIP_DE_AES=1
 else ifeq ($(CONFIG_MA35D0_SECURE_BOOT),y)
+  TFA_MAKE_FLAGS += FIP_DE_AES=1
+else ifeq ($(CONFIG_MA35H0_SECURE_BOOT),y)
   TFA_MAKE_FLAGS += FIP_DE_AES=1
 endif
 
@@ -125,12 +125,6 @@ else
   TFA_MAKE_FLAGS += MA35D1_DRAM_SIZE=0x3F800000 MA35D1_DDR_MAX_SIZE=0x40000000 \
 		    MA35D1_DRAM_S_BASE=0xAF800000 MA35D1_BL32_BASE=0xAF800000
 endif	// PROFILE
-else ifeq ($(BOARD),ma35h0)
-  TFA_DTB_NAME:=ma35h0-cpu650-custom-ddr
-ifneq ($(findstring 128m,$(PROFILE)),)
-  TFA_MAKE_FLAGS += MA35H0_DRAM_SIZE=0x7F800000 MA35H0_DDR_MAX_SIZE=0x80000000 \
-		    MA35H0_DRAM_S_BASE=0xFF800000 MA35H0_BL32_BASE=0xFF800000
-endif	// PROFILE
 else ifeq ($(BOARD),ma35d0)
   TFA_DTB_NAME:=ma35d0-cpu650-custom-ddr
 ifneq ($(findstring 128m,$(PROFILE)),)
@@ -140,6 +134,12 @@ else ifneq ($(findstring 256m,$(PROFILE)),)
   TFA_MAKE_FLAGS += MA35D0_DRAM_SIZE=0x0F800000 MA35D0_DDR_MAX_SIZE=0x10000000 \
 		    MA35D0_DRAM_S_BASE=0x8F800000 MA35D0_BL32_BASE=0x8F800000
 endif	// PROFILE
+else ifeq ($(BOARD),ma35h0)
+  TFA_DTB_NAME:=ma35h0-cpu650-custom-ddr
+ifneq ($(findstring 128m,$(PROFILE)),)
+  TFA_MAKE_FLAGS += MA35H0_DRAM_SIZE=0x7F800000 MA35H0_DDR_MAX_SIZE=0x80000000 \
+		    MA35H0_DRAM_S_BASE=0xFF800000 MA35H0_BL32_BASE=0xFF800000
+endif	// PROFILE
 endif	// BOARD
 
 define Build/Prepare
@@ -147,9 +147,9 @@ define Build/Prepare
 ifeq ($(CONFIG_TFA_CUSTOM_DDR_FILE_AUTO),y)
 ifeq ($(BOARD),ma35d1)
 
-ifeq ($(SUBTARGET),iot)
+ifneq ($(filter iot iotv1,$(SUBTARGET)),)
 
-ifeq ($(CONFIG_TFA_MA35_VER_A),y)
+ifeq ($(CONFIG_TFA_MA35_6F789),y)
 ifneq ($(findstring 128m,$(PROFILE)),)
 	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16F787C_LQFP-216_MCP_WinbondDDR2_128M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
 else ifneq ($(findstring 256m,$(PROFILE)),)
@@ -157,20 +157,50 @@ else ifneq ($(findstring 256m,$(PROFILE)),)
 else ifneq ($(findstring 512m,$(PROFILE)),)
 	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16F987C_LQFP-216_MCP_WinbondDDR3L_512M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
 endif	// PROFILE
-else ifeq ($(CONFIG_TFA_MA35_VER_B),y)
-endif	// VER
+else ifeq ($(CONFIG_TFA_MA35_6FHIJ),y)
+ifneq ($(findstring 256m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16FI87C_LQFP-216_MCP_WinbondDDR3L_256M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+else ifneq ($(findstring 512m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16FJ87C_LQFP-216_MCP_WinbondDDR3L_512M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+endif	// PROFILE
+endif	// 6F789
 
-else ifeq ($(SUBTARGET),som)
+else ifneq ($(filter som hmi,$(SUBTARGET)),)
 
-ifeq ($(CONFIG_TFA_MA35_VER_A),y)
+ifeq ($(CONFIG_TFA_MA35_5A789),y)
+ifneq ($(findstring 512m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D15A087C_NonMCP_WBDDR3L_512M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+endif	// PROFILE
+else ifeq ($(CONFIG_TFA_MA35_6A789),y)
 ifneq ($(findstring 256m,$(PROFILE)),)
 	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16A887C_LFBGA-312_MCP_WinbondDDR3L_256M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+else ifneq ($(findstring 512m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16A087C_NonMCP_WBDDR3L_512M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
 endif	// PROFILE
-else ifeq ($(CONFIG_TFA_MA35_VER_B),y)
-ifneq ($(findstring 512m,$(PROFILE)),)
+else ifeq ($(CONFIG_TFA_MA35_6AHIJ),y)
+ifneq ($(findstring 256m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16AI87C_LFBGA-312_MCP_WBDDR3L_256M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+else ifneq ($(findstring 512m,$(PROFILE)),)
 	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D16AJ87C_LFBGA-312_MCP_WBDDR3L_512M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
 endif	// PROFILE
-endif	// VER
+endif	// 5A789
+
+endif	// SUBTARGET
+
+else ifeq ($(BOARD),ma35d0)
+
+ifeq ($(SUBTARGET),iot)
+ifeq ($(CONFIG_TFA_MA35_3F789),y)
+ifneq ($(findstring 128m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D03F764C_MCP_WBDDR2_128M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+else ifneq ($(findstring 256m,$(PROFILE)),)
+	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D03F864C_MCP_WBDDR3L_256M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
+endif	// PROFILE
+else ifeq ($(CONFIG_TFA_MA35_3FHIJ),y)
+ifneq ($(findstring 128m,$(PROFILE)),)
+else ifneq ($(findstring 256m,$(PROFILE)),)
+endif	// PROFILE
+endif	// 3F789
 
 endif	// SUBTARGET
 
@@ -182,16 +212,6 @@ ifneq ($(findstring 128m,$(PROFILE)),)
 	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35H04F764C_MCP_WBDDR2_128M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
 endif	// PROFILE
 
-endif	// SUBTARGET
-
-else ifeq ($(BOARD),ma35d0)
-
-ifeq ($(SUBTARGET),iot)
-ifneq ($(findstring 128m,$(PROFILE)),)
-	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D03F764C_MCP_WBDDR2_128M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
-else ifneq ($(findstring 256m,$(PROFILE)),)
-	$(CP) $(TOPDIR)/Nuvoton/ddr/MA35D03F864C_MCP_WBDDR3L_256M_1PCS.h $(PKG_BUILD_DIR)/plat/nuvoton/$(BOARD)/include/custom_ddr.h
-endif	// PROFILE
 endif	// SUBTARGET
 
 endif	// BOARD
