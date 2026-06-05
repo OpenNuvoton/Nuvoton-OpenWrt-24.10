@@ -37,11 +37,14 @@ ma35d1_board_detect() {
 		fi
 		;;
 	"Nuvoton MA35D1-IoT")
-		if grep "mem=1" /proc/cmdline
+		if grep "mem=2" /proc/cmdline
 		then
-			memory="128m"
-		else
+			memory="256m"
+		elif grep "mem=5" /proc/cmdline
+		then
 			memory="512m"
+		else
+			memory="128m"
 		fi
 		;;
 	*)

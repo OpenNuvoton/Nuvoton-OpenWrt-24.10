@@ -510,6 +510,10 @@
 		interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk RTC_GATE>;
 		lxt-detect-enable = <0>;
+		wakeup-source;
+		enable-wakeup;
+		nvmem-cells;
+		nvmem-cell-names = "spr";
 		status = "disabled";
 	};
 
