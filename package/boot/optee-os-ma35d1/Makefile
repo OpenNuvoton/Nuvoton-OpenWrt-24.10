@@ -24,7 +24,7 @@ include $(INCLUDE_DIR)/image.mk
 
 define Optee-os/Default
   BUILD_TARGET:=$(BOARD)
-  DEPENDS:=@(TARGET_ma35d1||TARGET_ma35d0||TARGET_ma35h0)
+  DEPENDS:=@(TARGET_ma35d1||TARGET_ma35d0||TARGET_ma35d05k||TARGET_ma35h0)
 endef
 
 define Optee-os/ma35
@@ -35,6 +35,8 @@ endef
 OPTEE_TARGETS := ma35
 
 ifeq ($(BOARD),ma35d1)
+  OPTEE_MAKE_FLAGS += PLATFORM_FLAVOR=MA35D1 all
+else ifeq ($(BOARD),ma35d05k)
   OPTEE_MAKE_FLAGS += PLATFORM_FLAVOR=MA35D1 all
 else ifeq ($(BOARD),ma35h0)
   OPTEE_MAKE_FLAGS += PLATFORM_FLAVOR=MA35H0 all
