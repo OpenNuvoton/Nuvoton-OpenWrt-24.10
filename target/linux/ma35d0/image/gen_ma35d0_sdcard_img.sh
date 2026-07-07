@@ -4,8 +4,8 @@
 # Copyright (C) 2013 OpenWrt.org
 
 set -ex
-[ $# -eq 5 ] || {
-    echo "SYNTAX: $0 <file> <kernel size> <rootfs size> <image path> <device name>"
+[ $# -eq 6 ] || {
+    echo "SYNTAX: $0 <file> <kernel size> <rootfs size> <image path> <device name> <dtb path>"
     exit 1
 }
 
@@ -14,6 +14,7 @@ KERNEL_SIZE="$2"
 ROOTFS_SIZE="$3"
 KDIR="$4"
 DEVICE_NAME="$5"
+DTB_PATH="$6"
 
 head=4
 sect=63
@@ -38,8 +39,9 @@ cp -a $OUTPUT $KDIR/$DEVICE_NAME.pt
 #dd bs=512 if=${STAGING_DIR_IMAGE}/uboot-env.bin-sdcard of="$OUTPUT" seek=512 conv=notrunc
 # 0xC0000
 #dd bs=512 if=${STAGING_DIR_IMAGE}/fip.bin-sdcard of="$OUTPUT" seek=1536 conv=notrunc
-# 0x2c0000
-#dd bs=512 if=${STAGING_DIR_IMAGE}/Image.dtb of="$OUTPUT" seek=5632 conv=notrunc
+# 0x2c0000 - device tree, read by u-boot via "mmc read fdt 0x1600 0x80".
+# Embedded here so that sysupgrade/OTA can also refresh the DTB.
+dd bs=512 if="${DTB_PATH}" of="$OUTPUT" seek=5632 conv=notrunc
 # 0x300000
 dd bs=512 if=${KDIR}/${DEVICE_NAME}-uImage of="$OUTPUT" seek="$KERNEL_OFFSET" conv=notrunc
 # root fs

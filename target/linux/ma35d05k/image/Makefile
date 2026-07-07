@@ -23,6 +23,17 @@ define Build/copy-dtb
 	$(CP) $(KDIR)/$(DEVICE_DTS_CONFIG).dtb $(STAGING_DIR_IMAGE)/Image.dtb
 endef
 
+# Append the device tree blob into the sysupgrade tar so that OTA can also
+# update the dedicated "device-tree" NAND partition.
+define Build/append-dtb-tar
+	mkdir -p $@.dtbdir/sysupgrade-$(DEVICE_NAME)
+	$(CP) $(KDIR)/$(DEVICE_DTS_CONFIG).dtb \
+		$@.dtbdir/sysupgrade-$(DEVICE_NAME)/dtb
+	tar -C $@.dtbdir --owner=0 --group=0 --numeric-owner \
+		-rf $@ sysupgrade-$(DEVICE_NAME)/dtb
+	rm -rf $@.dtbdir
+endef
+
 define Build/sdcard-img
 	$(info "Build/sdcard-img" $(1))
 	SIGNATURE="$(IMG_PART_SIGNATURE)" \
@@ -30,7 +41,8 @@ define Build/sdcard-img
 		$(CONFIG_TARGET_KERNEL_PARTSIZE) \
 		$(CONFIG_TARGET_ROOTFS_PARTSIZE) \
 		${KDIR} \
-		$(DEVICE_NAME)
+		$(DEVICE_NAME) \
+		$(KDIR)/$(DEVICE_DTS_CONFIG).dtb
 endef
 
 define Image/Build
@@ -98,7 +110,7 @@ define Device/iotv1-nand
   FILESYSTEMS := squashfs
   IMAGES := firmware.bin sysupgrade.bin
   IMAGE/firmware.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-ubi | check-size $$$$(IMAGE_SIZE)
-  IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-ubi | sysupgrade-tar | append-metadata | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-ubi | sysupgrade-tar | append-dtb-tar | append-metadata | check-size $$$$(IMAGE_SIZE)
 endef
 
 define Device/iotv1-sdcard
