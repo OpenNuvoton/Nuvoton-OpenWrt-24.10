@@ -81,27 +81,56 @@ platform_do_upgrade_sdcard() {
 
 	sync
 
+	# Always read the incoming image's partition table: the offsets are needed
+	# both to detect a layout change and to place kernel/rootfs/rootfs_data
+	# when the layout did change.
+	#read the first 256 KiB (partition table area) from the image
+	get_image "$@" | dd of=/tmp/image.bs count=1 bs=512b
+	get_partitions /tmp/image.bs image
+
 	if [ "$UPGRADE_OPT_SAVE_PARTITIONS" = "1" ]; then
 		get_partitions "/dev/$diskdev" bootdisk
 
-		#read the first 256 KiB (partition table area) from the image
-		get_image "$@" | dd of=/tmp/image.bs count=1 bs=512b
-
-		get_partitions /tmp/image.bs image
-
-		#compare tables
-		diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
+		# Compare the tables in BOTH directions. The image may ADD partitions
+		# (ext4-only -> overlay) or DROP them (overlay -> ext4-only). A one-way
+		# "image not in bootdisk" diff only catches the grow case; the shrink
+		# case leaves a stale p4 (rootfs_data) in the on-disk table, which fstab
+		# then wrongly mounts as an overlay on top of the ext4-only root. Any
+		# difference forces the loader-preserving reinstall below, which
+		# rewrites the MBR to exactly match the new image (dropping p4).
+		diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image; grep -F -x -v -f /tmp/partmap.image /tmp/partmap.bootdisk)"
 	else
 		diff=1
 	fi
 
 	if [ -n "$diff" ]; then
-		get_image "$@" | dd of="/dev/$diskdev" bs=4096 conv=fsync
+		# The partition layout changed (e.g. ext4-only <-> overlay) or a full
+		# reinstall was requested. Reinstall the partition table, device tree
+		# and every partition at the offsets defined by the NEW image, but
+		# NEVER touch the raw loader region (sectors 1..5631: BL2 header, BL2,
+		# u-boot env, FIP). The sysupgrade image does not carry those loaders
+		# (they only live in the NuWriter pack), so the previous whole-disk
+		# "dd from sector 0" zeroed them out and left the board unbootable
+		# ("No image in SD"). Writing by absolute LBA also drops the dependency
+		# on partx, which is not shipped in the image; the kernel re-reads the
+		# new table on the following reboot.
+		echo "Partition layout changed, reinstalling (loaders preserved)..."
 
-		# Separate removal and addtion is necessary; otherwise, partition 1
-		# will be missing if it overlaps with the old partition 2
-		partx -d - "/dev/$diskdev"
-		partx -a - "/dev/$diskdev"
+		# New partition table (MBR, sector 0 only -- keep sectors 1..5631).
+		dd if=/tmp/image.bs of="/dev/$diskdev" bs=512 count=1 conv=fsync
+
+		# Device tree (raw, sector 5632 = 0x2c0000).
+		get_image "$@" | dd of="/dev/$diskdev" ibs=512 obs=512 skip=5632 seek=5632 count=512 conv=fsync
+
+		# Kernel (p2), rootfs (p3) and, for the overlay layout, rootfs_data
+		# (p4). Written by absolute LBA to the whole-disk device because the
+		# kernel still sees the old table, so the new partition nodes may not
+		# exist yet. Skip p1 (loader partition) to preserve the loaders.
+		while read part start size; do
+			[ "$part" = "1" ] && continue
+			echo "Writing partition $part ($start +$size sectors)..."
+			get_image "$@" | dd of="/dev/$diskdev" ibs=512 obs=512 skip="$start" seek="$start" count="$size" conv=fsync
+		done < /tmp/partmap.image
 
 		return 0
 	fi
@@ -122,14 +151,21 @@ platform_do_upgrade_sdcard() {
 
 	#(disabled) write u-boot image
 	#get_image "$@" | dd of="$diskdev" bs=1024 skip=8 seek=8 count=1016 conv=fsync
-	#iterate over each partition (kernel, rootfs) from the image and write it to the boot disk
+	# Reflash only kernel (p2) and rootfs (p3). In the overlay layout the p4
+	# "rootfs_data" ext4 partition holds the user settings and is left
+	# untouched so OTA preserves them (mirroring squashfs+ubifs NAND). In the
+	# ext4-only layout there is no p4; the settings live in p3 itself and are
+	# restored afterwards by platform_copy_config from the sysupgrade backup.
 	while read part start size; do
+		case "$part" in
+			2) imgname="kernel" ;;
+			3) imgname="rootfs" ;;
+			*)
+				echo "Preserving partition $part (rootfs_data / overlay)."
+				continue
+				;;
+		esac
 		if export_partdevice partdev $part; then
-			case "$part" in
-				2) imgname="kernel" ;;
-				3) imgname="rootfs" ;;
-				*) imgname="partition $part" ;;
-			esac
 			echo "Writing $imgname to /dev/$partdev..."
 			get_image "$@" | dd of="/dev/$partdev" ibs="512" obs=1M skip="$start" count="$size" conv=fsync
 		else
@@ -140,6 +176,47 @@ platform_do_upgrade_sdcard() {
 	#(disabled) copy partition uuid
 	#echo "Writing new UUID to /dev/$diskdev..."
 	#get_image "$@" | dd of="/dev/$diskdev" bs=1 skip=440 count=4 seek=440 conv=fsync
+}
+
+# Restore the saved configuration after an sdcard sysupgrade. do_upgrade()
+# calls this once platform_do_upgrade has run (when config is being kept).
+#
+# The two build-time layouts (selected by CONFIG_TARGET_SDCARD_DATA_PARTSIZE)
+# keep their settings in different places, so restoration differs:
+#   overlay (p4 present) : platform_do_upgrade_sdcard preserved the ext4
+#                          "rootfs_data" overlay (p4) untouched, so the settings
+#                          it holds are already intact -- nothing to do.
+#   ext4-only (no p4)    : the writable root (p3) was just reflashed, wiping the
+#                          settings stored in it, so extract the backup archive
+#                          back onto the fresh root.
+platform_copy_config() {
+	local partdev
+
+	case "$(ma35d1_board_name)" in
+		*sdcard*) ;;
+		*) return 0 ;;
+	esac
+
+	[ -n "$UPGRADE_BACKUP" ] && [ -f "$UPGRADE_BACKUP" ] || return 0
+
+	export_bootdevice || return 0
+
+	# Overlay layout: rootfs_data (p4) was preserved, settings already intact.
+	export_partdevice partdev 4 && return 0
+
+	# ext4-only layout: restore the config backup onto the reflashed root (p3).
+	export_partdevice partdev 3 || return 0
+
+	mkdir -p /tmp/new_root
+	if mount -t ext4 -o rw,noatime "/dev/$partdev" /tmp/new_root; then
+		echo "Restoring configuration to /dev/$partdev (ext4-only root)..."
+		tar -C /tmp/new_root -xzf "$UPGRADE_BACKUP"
+		sync
+		umount /tmp/new_root
+	else
+		echo "Unable to mount /dev/$partdev, configuration not restored."
+	fi
+	rmdir /tmp/new_root 2>/dev/null
 }
 
 platform_do_upgrade() {

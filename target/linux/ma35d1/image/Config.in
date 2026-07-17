@@ -20,4 +20,14 @@ config MA35D1_ECDSA_KEY
 	help
           ECDSA Key
 endif
+
+config TARGET_SDCARD_DATA_PARTSIZE
+	int "SD card rootfs_data (overlay) partition size (in MiB)"
+	default 100
+	help
+	  Size of the writable ext4 "rootfs_data" overlay partition appended
+	  to the SD card image. It holds user settings and is preserved across
+	  OTA upgrades (squashfs read-only root + ext4 overlay, mirroring the
+	  squashfs+ubifs layout used on NAND/SPI-NAND).
+	  Set to 0 to disable the overlay and use a writable ext4 root instead.
 endif

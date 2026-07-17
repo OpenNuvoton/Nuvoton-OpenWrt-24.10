@@ -42,7 +42,8 @@ define Build/sdcard-img
 		$(CONFIG_TARGET_ROOTFS_PARTSIZE) \
 		${KDIR} \
 		$(DEVICE_NAME) \
-		$(KDIR)/$(DEVICE_DTS_CONFIG).dtb
+		$(KDIR)/$(DEVICE_DTS_CONFIG).dtb \
+		$(CONFIG_TARGET_SDCARD_DATA_PARTSIZE)
 endef
 
 define Image/Build
@@ -71,6 +72,7 @@ ifeq ($(1),squashfs)
 	echo TARGET_FILESYSTEMS=\"$(TARGET_FILESYSTEMS)\" >> /tmp/openwrt.env
 	echo CONFIG_TARGET_KERNEL_PARTSIZE=$(CONFIG_TARGET_KERNEL_PARTSIZE) >> /tmp/openwrt.env
 	echo CONFIG_TARGET_ROOTFS_PARTSIZE=$(CONFIG_TARGET_ROOTFS_PARTSIZE) >> /tmp/openwrt.env
+	echo CONFIG_TARGET_SDCARD_DATA_PARTSIZE=$(CONFIG_TARGET_SDCARD_DATA_PARTSIZE) >> /tmp/openwrt.env
 ifeq ($(CONFIG_MA35D0_SECURE_BOOT),y)
 	echo CONFIG_MA35D0_AES_KEY=$(CONFIG_MA35D0_AES_KEY) >> /tmp/openwrt.env
 	echo CONFIG_MA35D0_ECDSA_KEY=$(CONFIG_MA35D0_ECDSA_KEY) >> /tmp/openwrt.env
@@ -114,7 +116,12 @@ define Device/iot-nand
 endef
 
 define Device/iot-sdcard
-  FILESYSTEMS := ext4
+  # CONFIG_TARGET_SDCARD_DATA_PARTSIZE selects the layout:
+  #   > 0 : read-only squashfs root (p3) + writable ext4 "rootfs_data"
+  #         overlay (p4), so OTA can preserve settings (mirrors squashfs+ubifs
+  #         NAND).
+  #   = 0 : a single writable ext4 root (p3), no overlay.
+  FILESYSTEMS := $(if $(filter 0,$(CONFIG_TARGET_SDCARD_DATA_PARTSIZE)),ext4,squashfs)
   IMAGES := sysupgrade.gz
   IMAGE/sysupgrade.gz := sdcard-img | append-metadata | gzip
 endef
