@@ -142,6 +142,18 @@
 
 		qspi0: spi@b0060000 {
 			status = "okay";
+			/*
+			 * This board only routes CLK/CS/IO0/IO1 to QSPI0
+			 * (pinctrl_qspi0, 4 pins) - IO2/IO3 are not muxed to
+			 * the controller, unlike boards that use
+			 * pinctrl_qspi0_quad. Keep quad reads disabled here,
+			 * otherwise the flash core issues Quad Fast-Read
+			 * commands and the IO2/IO3 data bits are read back as
+			 * floating/undriven, corrupting every read (visible as
+			 * JFFS2 "Magic bitmask not found" errors when mounting
+			 * rootfs from this flash).
+			 */
+			quad = <0>;
 			flash: flash@0 {
 				compatible = "w25q256";
 				#address-cells = <1>;
