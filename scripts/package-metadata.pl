@@ -663,6 +663,33 @@ sub dump_cyclonedxsbom_json {
 	return encode_json($cyclonedx);
 }
 
+# Read PKG_CPE_VERSION from the Makefile of the given package.
+# Boot components (U-Boot/TF-A/OP-TEE) built from a git tree get an
+# auto-generated PKG_VERSION like "2025.11.06~d39f0d54", which is useless for
+# CVE matching. PKG_CPE_VERSION holds the real upstream release (e.g. 2016.11)
+# and is read straight from that package's own Makefile, so multi-target trees
+# (uboot-nuc980 vs uboot-ma35d1) never pick up the wrong value.
+sub pkg_cpe_version($$) {
+	my ($pkg, $topdir) = @_;
+
+	return '' unless $pkg->{src} && $pkg->{src}{makefile};
+
+	my $makefile = $pkg->{src}{makefile};
+	$makefile = "$topdir/$makefile" if $topdir && $makefile !~ m{^/};
+
+	open my $fh, '<', $makefile or return '';
+	my $version = '';
+	while (<$fh>) {
+		if (/^\s*PKG_CPE_VERSION\s*:?=\s*(\S+)/) {
+			$version = $1;
+			last;
+		}
+	}
+	close $fh;
+
+	return $version;
+}
+
 sub gen_image_cyclonedxsbom() {
 	my $pkginfo = shift @ARGV;
 	my $imgmanifest = shift @ARGV;
@@ -674,9 +701,7 @@ sub gen_image_cyclonedxsbom() {
 	my $env_kernel_version = $ENV{SBOM_LINUX_VERSION} || '';
 	my $env_kernel_patchver = $ENV{SBOM_KERNEL_PATCHVER} || '';
 	my $env_target_board = $ENV{SBOM_TARGET_BOARD} || '';
-	my $env_uboot_version = $ENV{SBOM_UBOOT_VERSION} || '';
-	my $env_tfa_version = $ENV{SBOM_TFA_VERSION} || '';
-	my $env_optee_version = $ENV{SBOM_OPTEE_VERSION} || '';
+	my $env_topdir = $ENV{SBOM_TOPDIR} || '';
 
 	# When kernel is from a custom git repo, LINUX_VERSION is a sanitized URI.
 	# Use KERNEL_PATCHVER (e.g. "6.6.93") as the real version in that case.
@@ -835,7 +860,8 @@ sub gen_image_cyclonedxsbom() {
 			}
 
 			if ($matched_pkg) {
-				my $uboot_version = $env_uboot_version || $matched_pkg->{version} || '';
+				my $uboot_version = pkg_cpe_version($matched_pkg, $env_topdir)
+					|| $matched_pkg->{version} || '';
 				$uboot_version =~ s/-r\d+$//;
 
 				my $uboot_cpe = $matched_pkg->{cpe_id} || 'cpe:/a:denx:u-boot';
@@ -915,7 +941,8 @@ sub gen_image_cyclonedxsbom() {
 			}
 
 			if ($matched_pkg) {
-				my $tfa_version = $env_tfa_version || $matched_pkg->{version} || '';
+				my $tfa_version = pkg_cpe_version($matched_pkg, $env_topdir)
+					|| $matched_pkg->{version} || '';
 				$tfa_version =~ s/-r\d+$//;
 
 				my $tfa_cpe = $matched_pkg->{cpe_id} || 'cpe:/o:arm:trusted_firmware-a';
@@ -998,7 +1025,8 @@ sub gen_image_cyclonedxsbom() {
 			}
 
 			if ($matched_pkg) {
-				my $optee_version = $env_optee_version || $matched_pkg->{version} || '';
+				my $optee_version = pkg_cpe_version($matched_pkg, $env_topdir)
+					|| $matched_pkg->{version} || '';
 				$optee_version =~ s/-r\d+$//;
 
 				my $optee_cpe = $matched_pkg->{cpe_id} || 'cpe:/o:linaro:op-tee';
