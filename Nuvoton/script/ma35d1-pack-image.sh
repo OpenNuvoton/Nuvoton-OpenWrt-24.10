@@ -66,7 +66,8 @@ uboot_cmd() {
 		sed -i "s/boot_targets=/boot_targets=mtd0 /1" ${STAGING_DIR_IMAGE}/uboot-env.txt
 	elif echo $DEVICE_NAME | grep -q "nand"; then
 		sed -i "s/boot_targets=/boot_targets=nand0 /1" ${STAGING_DIR_IMAGE}/uboot-env.txt
-	elif echo $DEVICE_NAME | grep -q "sdcard1" && [ "${SUBTARGET}" = "som" ]; then
+	# som and hmi enable both SDHCI0 and SDHCI1, so the kernel names SDHCI1 mmcblk1
+	elif echo $DEVICE_NAME | grep -q "sdcard1" && { [ "${SUBTARGET}" = "som" ] || [ "${SUBTARGET}" = "hmi" ]; }; then
 		sed -i "s/mmc_block=mmcblk0p3/mmc_block=mmcblk1p3/1" ${STAGING_DIR_IMAGE}/uboot-env.txt
 		sed -i "s/boot_targets=/boot_targets=mmc1 /1" ${STAGING_DIR_IMAGE}/uboot-env.txt
 	fi
